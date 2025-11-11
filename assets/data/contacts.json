@@ -1,0 +1,23 @@
+{
+  "groups": [
+    {
+      "name": "Mezmur",
+      "contacts": [
+        { "name": "Leule", "phone": "+251913427553" },
+        { "name": "Abiti", "phone": "+251913427553" }
+      ]
+    },
+    {
+      "name": "WestGeneunet",
+      "contacts": [
+        { "name": "Lula dasilva", "phone": "+251913427553" }
+      ]
+    },
+    {
+      "name": "TemertKifel",
+      "contacts": [
+        { "name": "Teacher Luel", "phone": "+251913427553" }
+      ]
+    }
+  ]
+}
