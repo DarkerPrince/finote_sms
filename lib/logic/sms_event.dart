@@ -7,14 +7,14 @@ class SelectGroupEvent extends SmsEvent {
   SelectGroupEvent(this.groupName);
 }
 
-class SelectSimEvent extends SmsEvent {
-  final int simIndex;
-  SelectSimEvent(this.simIndex);
+class SendBulkSmsEvent extends SmsEvent {
+  final String groupName;
+  final String message;
+  SendBulkSmsEvent({required this.groupName, required this.message});
 }
 
-class SendBulkSmsEvent extends SmsEvent {
-  final String message;
-  final String groupName; // send only to this group
-
-  SendBulkSmsEvent(this.message, {required this.groupName});
+// 👇 new event
+class ToggleGroupSelectionEvent extends SmsEvent {
+  final String groupName;
+  ToggleGroupSelectionEvent(this.groupName);
 }

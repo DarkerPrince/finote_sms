@@ -14,10 +14,26 @@ class SmsBloc extends Bloc<SmsEvent, SmsState> {
     on<LoadGroupsEvent>(_onLoadGroups);
     on<SelectGroupEvent>(_onSelectGroup);
     on<SendBulkSmsEvent>(_onSendBulkSms);
+    on<ToggleGroupSelectionEvent>(_onToggleGroupSelection); // 👈 add this
   }
 
+  void _onToggleGroupSelection(
+      ToggleGroupSelectionEvent event, Emitter<SmsState> emit) {
+    final updatedSelection = List<String>.from(state.selectedGroups);
+
+    if (updatedSelection.contains(event.groupName)) {
+      updatedSelection.remove(event.groupName);
+    } else {
+      updatedSelection.add(event.groupName);
+    }
+
+    emit(state.copyWith(selectedGroups: updatedSelection));
+  }
+
+
   Future<void> _onLoadGroups(
-      LoadGroupsEvent event, Emitter<SmsState> emit) async {
+      LoadGroupsEvent event, Emitter<SmsState> emit)
+  async {
     try {
       final jsonData = await rootBundle.loadString('assets/data/contacts.json');
       final data = json.decode(jsonData);
@@ -48,54 +64,77 @@ class SmsBloc extends Bloc<SmsEvent, SmsState> {
   }
 
   Future<void> _onSendBulkSms(
-      SendBulkSmsEvent event, Emitter<SmsState> emit) async {
-    final group =
-    state.groups.firstWhere((g) => g.name == event.groupName);
+      SendBulkSmsEvent event,
+      Emitter<SmsState> emit,
+      ) async {
+    try {
+      final group = state.groups.firstWhere((g) => g.name == event.groupName);
 
-    final List<SentMessage> groupLogs =
-    List.from(state.sentLogsByGroup[event.groupName] ?? []);
+      // Request SMS permission
+      bool? granted = await telephony.requestPhoneAndSmsPermissions;
+      if (granted != true) {
+        emit(state.copyWith(status: "❌ SMS permission denied"));
+        return;
+      }
 
-    emit(state.copyWith(
-      status: "Sending messages to ${group.name}...",
-    ));
+      // Initialize logs for this group
+      final List<SentMessage> groupLogs =
+      List.from(state.sentLogsByGroup[event.groupName] ?? []);
 
-    for (final contact in group.contacts) {
-      final personalizedMessage =
-      event.message.replaceAll("{name}", contact.name);
+      emit(state.copyWith(
+          status: "📤 Sending messages to ${group.name}..."));
 
-      await telephony.sendSms(
-        to: contact.phone,
-        message: personalizedMessage,
-        statusListener: (SendStatus status) {
-          final log = SentMessage(
-            contactName: contact.name,
-            contactPhone: contact.phone,
+      for (final contact in group.contacts) {
+        final personalizedMessage =
+        event.message.replaceAll("{name}", contact.name);
+
+        try {
+          await telephony.sendSms(
+            to: contact.phone,
             message: personalizedMessage,
-            status: status.name, // Pending, Sent, Failed
-            groupName: group.name,
-            timestamp: DateTime.now(),
+            statusListener: (SendStatus status) {
+              final log = SentMessage(
+                contactName: contact.name,
+                contactPhone: contact.phone,
+                message: personalizedMessage,
+                status: status.name,
+                groupName: group.name,
+                timestamp: DateTime.now(),
+              );
+
+              // Add log to local groupLogs
+              groupLogs.add(log);
+
+              // Update state maps
+              final updatedGroupLogs =
+              Map<String, List<SentMessage>>.from(state.sentLogsByGroup);
+              updatedGroupLogs[event.groupName] = List.from(groupLogs);
+
+              final updatedContactLogs =
+              Map<String, List<SentMessage>>.from(state.sentLogsByContact);
+              updatedContactLogs[contact.phone] =
+              List.from(updatedContactLogs[contact.phone] ?? [])..add(log);
+
+              emit(state.copyWith(
+                status: "📩 Sent to ${contact.name}: ${status.name.toUpperCase()}",
+                sentLogsByGroup: updatedGroupLogs,
+                sentLogsByContact: updatedContactLogs,
+              ));
+            },
           );
-          groupLogs.add(log);
-
-          final updatedGroupLogs = Map<String, List<SentMessage>>.from(
-              state.sentLogsByGroup);
-          updatedGroupLogs[event.groupName] = groupLogs;
-
-          final updatedContactLogs = Map<String, List<SentMessage>>.from(
-              state.sentLogsByContact);
-          updatedContactLogs[contact.phone] =
-          List.from(updatedContactLogs[contact.phone] ?? [])..add(log);
-
+        } catch (e) {
           emit(state.copyWith(
-            status: "Sent to ${contact.name}: ${status.name}",
-            sentLogsByGroup: updatedGroupLogs,
-            sentLogsByContact: updatedContactLogs,
-          ));
-        },
-      );
-    }
+              status: "⚠️ Failed to send to ${contact.name}: $e"));
+        }
+      }
 
-    emit(state.copyWith(
-        status: "✅ All messages sent for group ${group.name}"));
+      emit(state.copyWith(
+        status: "✅ All messages sent for group ${group.name}",
+      ));
+    } catch (e) {
+      emit(state.copyWith(status: "❌ Error sending messages: $e"));
+    }
   }
+
+
 }

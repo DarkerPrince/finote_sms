@@ -30,7 +30,7 @@ class GroupDetailPage extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => ContactDetailPage(contact: contact, logs: logs),
+                      builder: (_) => ContactDetailPage(group: group),
                     ),
                   );
                 },

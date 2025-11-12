@@ -1,23 +1,4 @@
-// sms_state.dart
 import '../data/contact_model.dart';
-
-class SentMessage {
-  final String contactName;
-  final String contactPhone;
-  final String message;
-  final String? status;
-  final String groupName;
-  final DateTime timestamp;
-
-  SentMessage({
-    required this.contactName,
-    required this.contactPhone,
-    required this.message,
-    required this.groupName,
-    required this.timestamp,
-    this.status,
-  });
-}
 
 class SmsState {
   final List<Group> groups;
@@ -30,9 +11,10 @@ class SmsState {
     this.groups = const [],
     this.selectedGroups = const [],
     this.status,
-    this.sentLogsByGroup = const {},
-    this.sentLogsByContact = const {},
-  });
+    Map<String, List<SentMessage>>? sentLogsByGroup,
+    Map<String, List<SentMessage>>? sentLogsByContact,
+  })  : sentLogsByGroup = sentLogsByGroup ?? {},
+        sentLogsByContact = sentLogsByContact ?? {};
 
   SmsState copyWith({
     List<Group>? groups,
