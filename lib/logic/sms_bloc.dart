@@ -2,6 +2,7 @@
 import 'dart:convert';
 import 'package:another_telephony/telephony.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../data/contact_model.dart';
 import 'sms_event.dart';
@@ -15,6 +16,54 @@ class SmsBloc extends Bloc<SmsEvent, SmsState> {
     on<SelectGroupEvent>(_onSelectGroup);
     on<SendBulkSmsEvent>(_onSendBulkSms);
     on<ToggleGroupSelectionEvent>(_onToggleGroupSelection); // 👈 add this
+    on<RestoreLogsEvent>(_onRestoreLogs);
+    // Try to load persisted logs on creation
+    _loadPersistedLogs();
+  }
+
+  Future<void> _loadPersistedLogs() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final groupJson = prefs.getString('sentLogsByGroup');
+      final contactJson = prefs.getString('sentLogsByContact');
+
+      Map<String, List<SentMessage>> loadedGroups = {};
+      Map<String, List<SentMessage>> loadedContacts = {};
+
+      if (groupJson != null) {
+        final Map<String, dynamic> decoded = json.decode(groupJson);
+        decoded.forEach((k, v) {
+          final list = (v as List).map((e) => SentMessage.fromJson(e)).toList();
+          loadedGroups[k] = list;
+        });
+      }
+
+      if (contactJson != null) {
+        final Map<String, dynamic> decoded = json.decode(contactJson);
+        decoded.forEach((k, v) {
+          final list = (v as List).map((e) => SentMessage.fromJson(e)).toList();
+          loadedContacts[k] = list;
+        });
+      }
+
+      if (loadedGroups.isNotEmpty || loadedContacts.isNotEmpty) {
+        add(RestoreLogsEvent(loadedGroups.map((k, v) => MapEntry(k, v)), loadedContacts.map((k, v) => MapEntry(k, v))));
+      }
+    } catch (e) {
+      // ignore load errors
+    }
+  }
+
+  Future<void> _persistLogs(SmsState state) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final groupMap = state.sentLogsByGroup.map((k, v) => MapEntry(k, v.map((e) => e.toJson()).toList()));
+      final contactMap = state.sentLogsByContact.map((k, v) => MapEntry(k, v.map((e) => e.toJson()).toList()));
+      await prefs.setString('sentLogsByGroup', json.encode(groupMap));
+      await prefs.setString('sentLogsByContact', json.encode(contactMap));
+    } catch (e) {
+      // ignore persist errors
+    }
   }
 
   void _onToggleGroupSelection(
@@ -30,6 +79,29 @@ class SmsBloc extends Bloc<SmsEvent, SmsState> {
     emit(state.copyWith(selectedGroups: updatedSelection));
   }
 
+  void _onRestoreLogs(RestoreLogsEvent event, Emitter<SmsState> emit) {
+    // convert dynamic lists to SentMessage lists
+    final restoredGroups = <String, List<SentMessage>>{};
+    event.groups.forEach((k, v) {
+      restoredGroups[k] = (v as List).map((e) => SentMessage.fromJson(e)).toList();
+    });
+
+    final restoredContacts = <String, List<SentMessage>>{};
+    event.contacts.forEach((k, v) {
+      restoredContacts[k] = (v as List).map((e) => SentMessage.fromJson(e)).toList();
+    });
+
+    emit(state.copyWith(
+      sentLogsByGroup: restoredGroups,
+      sentLogsByContact: restoredContacts,
+    ));
+
+    // Persist again to ensure storage is normalized
+    _persistLogs(state.copyWith(
+      sentLogsByGroup: restoredGroups,
+      sentLogsByContact: restoredContacts,
+    ));
+  }
 
   Future<void> _onLoadGroups(
       LoadGroupsEvent event, Emitter<SmsState> emit)
@@ -120,6 +192,11 @@ class SmsBloc extends Bloc<SmsEvent, SmsState> {
                 sentLogsByGroup: updatedGroupLogs,
                 sentLogsByContact: updatedContactLogs,
               ));
+              // Persist updated logs
+              _persistLogs(state.copyWith(
+                sentLogsByGroup: updatedGroupLogs,
+                sentLogsByContact: updatedContactLogs,
+              ));
             },
           );
         } catch (e) {
@@ -130,6 +207,12 @@ class SmsBloc extends Bloc<SmsEvent, SmsState> {
 
       emit(state.copyWith(
         status: "✅ All messages sent for group ${group.name}",
+      ));
+      // persist final state
+      _persistLogs(state.copyWith(
+        sentLogsByGroup: Map<String, List<SentMessage>>.from(state.sentLogsByGroup)
+          ..[event.groupName] = List.from(groupLogs),
+        sentLogsByContact: Map<String, List<SentMessage>>.from(state.sentLogsByContact),
       ));
     } catch (e) {
       emit(state.copyWith(status: "❌ Error sending messages: $e"));

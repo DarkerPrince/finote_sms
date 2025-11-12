@@ -18,3 +18,10 @@ class ToggleGroupSelectionEvent extends SmsEvent {
   final String groupName;
   ToggleGroupSelectionEvent(this.groupName);
 }
+
+// Internal event used to restore persisted logs on startup
+class RestoreLogsEvent extends SmsEvent {
+  final Map<String, List<dynamic>> groups;
+  final Map<String, List<dynamic>> contacts;
+  RestoreLogsEvent(this.groups, this.contacts);
+}

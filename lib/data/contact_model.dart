@@ -56,5 +56,23 @@ class SentMessage {
       timestamp: timestamp ?? this.timestamp,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'contactName': contactName,
+        'contactPhone': contactPhone,
+        'message': message,
+        'status': status,
+        'groupName': groupName,
+        'timestamp': timestamp.toIso8601String(),
+      };
+
+  factory SentMessage.fromJson(Map<String, dynamic> json) => SentMessage(
+        contactName: json['contactName'] ?? '',
+        contactPhone: json['contactPhone'] ?? '',
+        message: json['message'] ?? '',
+        status: json['status'] ?? 'Not sent',
+        groupName: json['groupName'] ?? '',
+        timestamp: DateTime.tryParse(json['timestamp'] ?? '') ?? DateTime.now(),
+      );
 }
 

@@ -3,7 +3,7 @@ import 'package:finote_sms/logic/sms_bloc.dart';
 import 'package:finote_sms/logic/sms_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'contact_detail_page.dart';
+import 'contact_messages_page.dart';
 
 class GroupDetailPage extends StatelessWidget {
   final Group group;
@@ -30,7 +30,10 @@ class GroupDetailPage extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => ContactDetailPage(group: group),
+                      builder: (_) => ContactMessagesPage(
+                        contactPhone: contact.phone,
+                        contactName: contact.name,
+                      ),
                     ),
                   );
                 },
