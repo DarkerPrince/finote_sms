@@ -42,6 +42,10 @@ dependencies:
   # 🧠 For state management (event-driven)
   flutter_bloc: ^8.1.4
   shared_preferences: ^2.5.3
+  firebase_auth: ^6.1.2
+  firebase_core: ^4.2.1
+  google_sign_in: ^6.1.0
+
 
 
 dev_dependencies:

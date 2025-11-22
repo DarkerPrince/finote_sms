@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "455623290656",
+    "project_id": "finotesms",
+    "storage_bucket": "finotesms.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:455623290656:android:789a40515aafdb0184b145",
+        "android_client_info": {
+          "package_name": "com.example.finote_sms"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "455623290656-juisqmhhormgddgbe59ekd95t1g8efdr.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.finote_sms",
+            "certificate_hash": "eb36efe86073225f9f643d1fcdaee949d7211b65"
+          }
+        },
+        {
+          "client_id": "455623290656-28o3hftbv95bgj645743rceqqki60irr.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDEaBR67Hf1-JPVjPweXk5GeNK0r9Trn3Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "455623290656-28o3hftbv95bgj645743rceqqki60irr.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

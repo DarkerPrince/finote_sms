@@ -1,18 +1,42 @@
 import 'package:finote_sms/data/contact_model.dart';
 import 'package:finote_sms/logic/sms_event.dart';
+import 'package:finote_sms/login_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../logic/sms_bloc.dart';
 import '../logic/sms_state.dart';
 
 class BulkSmsPage extends StatelessWidget {
+
+
+
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    final userName = user?.displayName ?? user?.email ?? "User";
+
     return BlocBuilder<SmsBloc, SmsState>(
       builder: (context, state) {
         return Scaffold(
           appBar: AppBar(
-            title: const Text("📱 Bulk SMS Sender"),
+            title: Text("📱 Welcome $userName"),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.logout),
+                tooltip: "Logout",
+                onPressed: () async {
+                  await FirebaseAuth.instance.signOut();
+
+                  // Navigate back to login page
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => LoginPage()),
+                  );
+                },
+              ),
+            ],
           ),
           body: Column(
             children: [
