@@ -19,6 +19,8 @@ class ToggleGroupSelectionEvent extends SmsEvent {
   ToggleGroupSelectionEvent(this.groupName);
 }
 
+class ClearStatusEvent extends SmsEvent {}
+
 // Internal event used to restore persisted logs on startup
 class RestoreLogsEvent extends SmsEvent {
   final Map<String, List<dynamic>> groups;

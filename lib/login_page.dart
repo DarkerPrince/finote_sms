@@ -26,9 +26,8 @@ class _LoginPageState extends State<LoginPage> {
     try {
       UserCredential userCred = await FirebaseAuth.instance
           .signInWithEmailAndPassword(
-          email: emailController.text.trim(),
-          password: passwordController.text.trim()
-      );
+              email: emailController.text.trim(),
+              password: passwordController.text.trim());
 
       User? user = userCred.user;
 
@@ -55,16 +54,21 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> signInWithGoogle() async {
-    setState(() { isLoading = true; errorMessage = null; });
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+    });
 
     try {
       final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
       if (googleUser == null) return;
 
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
 
       final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken, idToken: googleAuth.idToken,
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
       );
 
       await FirebaseAuth.instance.signInWithCredential(credential);
@@ -81,112 +85,186 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Center(
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                Text("FinoteSMS Login",
-                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
-
-                if (errorMessage != null)
-                  Text(errorMessage!, style: TextStyle(color: Colors.red)),
-
-                SizedBox(height: 20),
-
-                TextField(
-                  controller: emailController,
-                  decoration: InputDecoration(
-                      labelText: "Email", border: OutlineInputBorder()),
-                ),
-                SizedBox(height: 20),
-
-                TextField(
-                  controller: passwordController,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                      labelText: "Password", border: OutlineInputBorder()),
-                ),
-
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    child: Text("Forgot Password?"),
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => ForgotPasswordPage()),
-                    ),
-                  ),
-                ),
-
-                SizedBox(height: 20),
-
-                isLoading
-                    ? CircularProgressIndicator()
-                    : Column(
-                  children: [
-                    ElevatedButton(
-                        onPressed: loginUser, child: Text("Login")),
-
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                      Text(" Dont have an Account? "),
-                      OutlinedButton(
-                        child: Text("Create New"),
-                        onPressed: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => RegisterPage()
-                          ),
-                        ),
-                      ),
-                    ],),
-
-
-                    Divider(height: 40),
-
-                    ElevatedButton(
-                      onPressed: signInWithGoogle,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white, // Google button is usually white
-                        elevation: 2,
-                        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          side: BorderSide(color: Colors.grey.shade300), // light border
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Image.network(
-                            'http://pngimg.com/uploads/google/google_PNG19635.png',
-                            height: 24,
-                            width: 24,
-                          ),
-                          SizedBox(width: 12),
-                          Text(
-                            "Sign in with Google",
-                            style: TextStyle(
-                              color: Colors.black87,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-
-                  ],
-                )
-              ],
+      backgroundColor:
+          const Color(0xFFE8ECF8), // light blue background like sample
+      body: Stack(
+        children: [
+          // FIXED BOTTOM IMAGE
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Image.asset(
+              'assets/image/background.png',
+              width: double.infinity,
+              fit: BoxFit.fitWidth,
             ),
           ),
+
+          // Scrollable main content
+          SingleChildScrollView(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: MediaQuery.of(context).size.height,
+                ),
+                child: IntrinsicHeight(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const SizedBox(height: 40),
+
+                      // LOGO
+                      Image.asset(
+                        'assets/image/logo.png',
+                        height: 100,
+                        width: 100,
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      Text(
+                        "ፍኖት SMS",
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.blue.shade800,
+                        ),
+                      ),
+
+                      const SizedBox(height: 32),
+
+                      // CARD
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(22),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black12,
+                                blurRadius: 15,
+                                offset: Offset(0, 6),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text("Login to your Account",
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w600,
+                                  )),
+                              const SizedBox(height: 20),
+                              TextField(
+                                controller: emailController,
+                                decoration: InputDecoration(
+                                  labelText: "Email",
+                                  filled: true,
+                                  fillColor: Colors.grey.shade100,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              TextField(
+                                controller: passwordController,
+                                obscureText: true,
+                                decoration: InputDecoration(
+                                  labelText: "Password",
+                                  filled: true,
+                                  fillColor: Colors.grey.shade100,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                ),
+                              ),
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: TextButton(
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => ForgotPasswordPage(),
+                                      ),
+                                    );
+                                  },
+                                  child: Text("Forgot Password?"),
+                                ),
+                              ),
+                              isLoading
+                                  ? Center(child: CircularProgressIndicator())
+                                  : SizedBox(
+                                      width: double.infinity,
+                                      height: 50,
+                                      child: ElevatedButton(
+                                        onPressed: loginUser,
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.blue.shade800,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(14),
+                                          ),
+                                        ),
+                                        child: const Text(
+                                          "Sign in",
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 120), // Space above bottom image
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+
+        ],
+      ),
+    );
+  }
+
+// ---- SOCIAL BUTTON WIDGET ----
+  Widget _socialBtn(String asset, Function() onTap) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        height: 48,
+        width: 60,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black12,
+              blurRadius: 6,
+              offset: Offset(0, 2),
+            )
+          ],
+        ),
+        child: Center(
+          child: Image.asset(asset, height: 22),
         ),
       ),
     );

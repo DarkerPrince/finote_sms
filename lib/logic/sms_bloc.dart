@@ -17,6 +17,9 @@ class SmsBloc extends Bloc<SmsEvent, SmsState> {
     on<SendBulkSmsEvent>(_onSendBulkSms);
     on<ToggleGroupSelectionEvent>(_onToggleGroupSelection); // 👈 add this
     on<RestoreLogsEvent>(_onRestoreLogs);
+    on<ClearStatusEvent>((event, emit) {
+      emit(state.copyWith(status: ""));
+    });
     // Try to load persisted logs on creation
     _loadPersistedLogs();
   }
@@ -139,6 +142,9 @@ class SmsBloc extends Bloc<SmsEvent, SmsState> {
       SendBulkSmsEvent event,
       Emitter<SmsState> emit,
       ) async {
+
+    print("\n\n Sending the sms for ${event.groupName} message : ${event.message}");
+
     try {
       final group = state.groups.firstWhere((g) => g.name == event.groupName);
 

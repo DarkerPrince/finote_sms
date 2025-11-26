@@ -1,3 +1,4 @@
+import 'package:ethiopian_datetime_picker/ethiopian_datetime_picker.dart';
 import 'package:finote_sms/data/contact_model.dart';
 import 'package:finote_sms/logic/sms_event.dart';
 import 'package:finote_sms/login_page.dart';
@@ -10,6 +11,87 @@ import '../logic/sms_state.dart';
 
 class BulkSmsPage extends StatelessWidget {
 
+  void showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.logout, size: 48, color: Colors.blue),
+
+                SizedBox(height: 16),
+
+                Text(
+                  "Logout",
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+
+                SizedBox(height: 8),
+
+                Text(
+                  "Are you sure you want to log out of FinoteSMS?",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.black54,
+                  ),
+                ),
+
+                SizedBox(height: 24),
+
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(
+                        "Cancel",
+                        style: TextStyle(fontSize: 16),
+                      ),
+                    ),
+                    SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: () async {
+                        await FirebaseAuth.instance.signOut();
+
+                        Navigator.pop(context); // close dialog
+
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (_) => LoginPage()),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: Text(
+                        "Logout",
+                        style: TextStyle(fontSize: 16, color: Colors.white),
+                      ),
+                    ),
+                  ],
+                )
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 
 
   @override
@@ -17,7 +99,15 @@ class BulkSmsPage extends StatelessWidget {
     final user = FirebaseAuth.instance.currentUser;
     final userName = user?.displayName ?? user?.email ?? "User";
 
-    return BlocBuilder<SmsBloc, SmsState>(
+    return BlocConsumer<SmsBloc, SmsState>(
+      listener: (context, state) {
+        if (state.status != null && state.status!.isNotEmpty) {
+          Future.delayed(const Duration(seconds: 2), () {
+            // Dispatch event to clear status only if still the same
+            context.read<SmsBloc>().add(ClearStatusEvent());
+          });
+        }
+      },
       builder: (context, state) {
         return Scaffold(
           appBar: AppBar(
@@ -27,13 +117,7 @@ class BulkSmsPage extends StatelessWidget {
                 icon: const Icon(Icons.logout),
                 tooltip: "Logout",
                 onPressed: () async {
-                  await FirebaseAuth.instance.signOut();
-
-                  // Navigate back to login page
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (_) => LoginPage()),
-                  );
+                  showLogoutDialog(context);
                 },
               ),
             ],
@@ -41,8 +125,11 @@ class BulkSmsPage extends StatelessWidget {
           body: Column(
             children: [
               // 🟢 STATUS BAR
-              if (state.status != null && state.status!.isNotEmpty)
-                Container(
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                child: (state.status != null && state.status!.isNotEmpty)
+                    ? Container(
+                  key: ValueKey(state.status),
                   width: double.infinity,
                   color: Colors.blue.shade50,
                   padding: const EdgeInsets.all(8),
@@ -50,7 +137,9 @@ class BulkSmsPage extends StatelessWidget {
                     state.status!,
                     style: const TextStyle(fontWeight: FontWeight.w500),
                   ),
-                ),
+                )
+                    : const SizedBox.shrink(),
+              ),
 
               // 🟩 GROUPS LIST
               Expanded(
@@ -255,7 +344,8 @@ class BulkSmsPage extends StatelessWidget {
       BuildContext context,
       String groupName,
       List<SentMessage> logs,
-      ) {
+      )
+  {
     final bloc = context.read<SmsBloc>();
     final group =
     bloc.state.groups.firstWhere((g) => g.name == groupName); // get group
@@ -316,9 +406,128 @@ class BulkSmsPage extends StatelessWidget {
   }
 
 
-  // 👇 Message bottom sheet
+
   void _showSendBottomSheet(BuildContext context, List<String> selectedGroups) {
     final msgController = TextEditingController();
+
+    void insertTag(String tag) {
+      final text = msgController.text;
+      final selection = msgController.selection;
+
+      // Fallback to 0 if the selection is invalid
+      final start = selection.start >= 0 ? selection.start : 0;
+      final end = selection.end >= 0 ? selection.end : 0;
+
+      final newText = text.replaceRange(start, end, tag);
+
+      msgController.text = newText;
+      msgController.selection = TextSelection.collapsed(
+        offset: start + tag.length,
+      );
+    }
+
+
+    // TODAY DATE
+    String getTodayDate() {
+      final now = ETDateTime.now();
+      final formatter = ETDateFormat("EEEE፡ d MMMM y");
+      final dateStr = formatter.format(now);
+      return dateStr;
+    }
+
+    String convertToEthiopianHour(int hour) {
+      int ethHour = hour - 6;
+      if (ethHour <= 0) ethHour += 12;
+      return ethHour.toString();
+    }
+
+    String getEthiopianTimeLabel(int hour) {
+      if (hour >= 0 && hour < 6) {
+        return "ጠዋት"; // Midnight → 6 AM
+      } else if (hour >= 6 && hour < 12) {
+        return "ቀን"; // 6 AM → 12 PM
+      } else if (hour >= 12 && hour < 18) {
+        return "ከሰዓት"; // 12 PM → 6 PM
+      } else {
+        return "ማታ"; // 6 PM → Midnight
+      }
+    }
+
+    // CURRENT TIME
+    String getNowTime() {
+      final picked = ETDateTime.now();
+
+        // int hour = picked.hour;
+        // final minute = picked.minute.toString().padLeft(2, "0");
+
+        // Determine Amharic label
+        // String label;
+
+
+        int hour = picked.hour;
+        int minute = picked.minute;
+
+        final label = getEthiopianTimeLabel(hour);
+        final ethHour = convertToEthiopianHour(hour);
+
+        final timeStr = "$label $ethHour:${minute.toString().padLeft(2, '0')}";
+
+        return timeStr;
+
+    }
+
+    // PICK DATE
+    Future<void> pickCustomDate() async {
+      ETDateTime? picked = await showETDatePicker(
+        context: context,
+        initialDate: ETDateTime.now(),
+        firstDate: ETDateTime.now(),
+        lastDate: ETDateTime(2040, 9),
+        locale: const Locale('am'),
+        initialEntryMode: DatePickerEntryMode.calendarOnly,
+        initialDatePickerMode: DatePickerMode.day,
+      );
+      // final picked = await showDatePicker(
+      //   context: context,
+      //   firstDate: DateTime(2020),
+      //   lastDate: DateTime(2100),
+      //   initialDate: DateTime.now(),
+      // );
+
+      if (picked != null) {
+        final formatter = ETDateFormat("EEEE፡ d MMMM y");
+
+        final dateStr = formatter.format(picked);
+
+        insertTag(dateStr);
+      }
+    }
+
+
+
+
+    // PICK TIME
+    Future<void> pickCustomTime() async {
+      final picked = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.now(),
+      );
+
+      if (picked != null) {
+        int hour = picked.hour;
+        int minute = picked.minute;
+
+        final label = getEthiopianTimeLabel(hour);
+        final ethHour = convertToEthiopianHour(hour);
+
+        final timeStr = "$label $ethHour:${minute.toString().padLeft(2, '0')}";
+
+        insertTag(timeStr);
+      }
+    }
+
+
+
 
     showModalBottomSheet(
       context: context,
@@ -334,24 +543,50 @@ class BulkSmsPage extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text("Send Message to Selected Groups"),
-              const SizedBox(height: 10),
+              const Text(
+                "Send Message to Selected Groups",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+
+              /// ---------- TAG SHORTCUT BUTTONS ----------
+              Wrap(
+                spacing: 10,
+                children: [
+                  _tagButton("{name}", () => insertTag("{name}")),
+
+                  /// DATE TAGS
+                  _tagButton("Today Date", () => insertTag(getTodayDate())),
+                  _tagButton("Pick Date", () => pickCustomDate()),
+
+                  /// TIME TAGS
+                  _tagButton("Now Time", () => insertTag(getNowTime())),
+                  _tagButton("Pick Time", () => pickCustomTime()),
+
+                  _tagButton("{phone}", () => insertTag("{phone}")),
+                ],
+              ),
+
+              const SizedBox(height: 12),
+
+              /// ---------- MESSAGE TEXT FIELD ----------
               TextField(
                 controller: msgController,
-                maxLines: 4,
+                maxLines: 5,
                 decoration: const InputDecoration(
-                  hintText: "Enter message (use {name} for personalization)",
+                  hintText: "Enter message (use tags for personalization)",
                   border: OutlineInputBorder(),
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
+
+              /// ---------- SEND BUTTON ----------
               ElevatedButton.icon(
                 icon: const Icon(Icons.send_rounded),
                 label: const Text("Send Now"),
                 onPressed: () {
-                  Navigator.pop(context); // close modal
+                  Navigator.pop(context);
 
-                  // Dispatch sending event
                   for (var groupName in selectedGroups) {
                     context.read<SmsBloc>().add(
                       SendBulkSmsEvent(
@@ -369,4 +604,27 @@ class BulkSmsPage extends StatelessWidget {
       },
     );
   }
+
+  Widget _tagButton(String label, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.blue.shade50,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.blue.shade200),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: Colors.blue.shade800,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+
+
 }
