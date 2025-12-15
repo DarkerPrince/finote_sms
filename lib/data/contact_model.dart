@@ -1,11 +1,12 @@
 class Contact {
   final String name;
   final String phone;
+  final bool isMale;
 
-  Contact({required this.name, required this.phone});
+  Contact({required this.name, required this.phone,required this.isMale});
 
   factory Contact.fromJson(Map<String, dynamic> json) =>
-      Contact(name: json['name'], phone: json['phone']);
+      Contact(name: json['name'], phone: json['phone'],isMale: json['isMale']);
 }
 
 class Group {

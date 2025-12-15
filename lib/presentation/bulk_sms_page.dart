@@ -111,7 +111,18 @@ class BulkSmsPage extends StatelessWidget {
       builder: (context, state) {
         return Scaffold(
           appBar: AppBar(
-            title: Text("📱 Welcome $userName"),
+            title: Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [
+                  Icon(Icons.message),
+                  Text("Welcome"),
+                ],),
+                Text(userName==''?'Boss':userName,style: TextStyle(fontSize: 12),),
+              ],
+            ),
             actions: [
               IconButton(
                 icon: const Icon(Icons.logout),
@@ -166,6 +177,7 @@ class BulkSmsPage extends StatelessWidget {
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       child: ListTile(
                         title: Text(group.name),
+                        dense: true,
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -183,26 +195,25 @@ class BulkSmsPage extends StatelessWidget {
                               ),
                           ],
                         ),
+                        leading:  IconButton(
+                          icon: Icon(
+                            state.selectedGroups.contains(group.name)
+                                ? Icons.check_circle
+                                : Icons.radio_button_unchecked,
+                            color: Colors.teal,
+                          ),
+                          onPressed: () {
+                            context
+                                .read<SmsBloc>()
+                                .add(ToggleGroupSelectionEvent(group.name));
+                          },
+                        ),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            // ✅ Select Button
-                            IconButton(
-                              icon: Icon(
-                                state.selectedGroups.contains(group.name)
-                                    ? Icons.check_circle
-                                    : Icons.radio_button_unchecked,
-                                color: Colors.teal,
-                              ),
-                              onPressed: () {
-                                context
-                                    .read<SmsBloc>()
-                                    .add(ToggleGroupSelectionEvent(group.name));
-                              },
-                            ),
                             // 🔍 View Details
                             IconButton(
-                              icon: const Icon(Icons.list_alt_rounded),
+                              icon: const Icon(Icons.arrow_forward_ios),
                               onPressed: () {
                                 _showGroupContacts(context, group.name, groupLogs);
                               },
@@ -352,6 +363,8 @@ class BulkSmsPage extends StatelessWidget {
 
     showModalBottomSheet(
       context: context,
+      enableDrag: true,
+      showDragHandle: true,
       builder: (_) {
         return Padding(
           padding: const EdgeInsets.all(12),
@@ -510,8 +523,18 @@ class BulkSmsPage extends StatelessWidget {
     Future<void> pickCustomTime() async {
       final picked = await showTimePicker(
         context: context,
+        initialEntryMode: TimePickerEntryMode.inputOnly,
         initialTime: TimeOfDay.now(),
+        builder: (context, child) {
+          return MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              alwaysUse24HourFormat: false, // 👈 12-hour format
+            ),
+            child: child!,
+          );
+        },
       );
+
 
       if (picked != null) {
         int hour = picked.hour;
@@ -552,8 +575,9 @@ class BulkSmsPage extends StatelessWidget {
               /// ---------- TAG SHORTCUT BUTTONS ----------
               Wrap(
                 spacing: 10,
+                runSpacing: 10,
                 children: [
-                  _tagButton("{name}", () => insertTag("{name}")),
+                  _tagButton("{ስም}", () => insertTag("{ስም}")),
 
                   /// DATE TAGS
                   _tagButton("Today Date", () => insertTag(getTodayDate())),
@@ -563,7 +587,7 @@ class BulkSmsPage extends StatelessWidget {
                   _tagButton("Now Time", () => insertTag(getNowTime())),
                   _tagButton("Pick Time", () => pickCustomTime()),
 
-                  _tagButton("{phone}", () => insertTag("{phone}")),
+                  _tagButton("{ወንድማችን/እኅታችን}", () => insertTag("{ወንድማችን/እኅታችን}")),
                 ],
               ),
 
@@ -581,29 +605,124 @@ class BulkSmsPage extends StatelessWidget {
               const SizedBox(height: 12),
 
               /// ---------- SEND BUTTON ----------
-              ElevatedButton.icon(
-                icon: const Icon(Icons.send_rounded),
-                label: const Text("Send Now"),
-                onPressed: () {
-                  Navigator.pop(context);
+              Row(children: [
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.remove_red_eye),
+                  label: const Text("Message Preview"),
+                  onPressed: () {
+                    final String baseMessage =
+                    msgController.text.replaceAll("{ስም}", "{ስም}");
 
-                  for (var groupName in selectedGroups) {
-                    context.read<SmsBloc>().add(
-                      SendBulkSmsEvent(
-                        groupName: groupName,
-                        message: msgController.text,
-                      ),
+                    final String malePreview = applyGenderPlaceholders(
+                      message: baseMessage,
+                      isMale: true,
                     );
-                  }
-                },
-              ),
-              const SizedBox(height: 16),
+
+                    final String femalePreview = applyGenderPlaceholders(
+                      message: baseMessage,
+                      isMale: false,
+                    );
+
+                    showMessageConfirmationDialog(
+                      context,
+                      malePreview: malePreview,
+                      femalePreview: femalePreview,
+                      selectedGroups: selectedGroups
+                    );
+                  },
+                ),
+                const SizedBox(width: 4),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.send_rounded),
+                  label: const Text("Send Now"),
+                  onPressed: () {
+                    Navigator.pop(context);
+
+                    for (var groupName in selectedGroups) {
+                      context.read<SmsBloc>().add(
+                        SendBulkSmsEvent(
+                          groupName: groupName,
+                          message: msgController.text,
+                        ),
+                      );
+                    }
+                  },
+                ),
+
+
+              ],),
+              const SizedBox(height: 4),
             ],
           ),
         );
       },
     );
   }
+
+  String applyGenderPlaceholders({
+    required String message,
+    required bool isMale, // "male" or "female"
+  }) {
+    final regex = RegExp(r'\{([^\/{}]+)\/([^{}]+)\}');
+
+    return message.replaceAllMapped(regex, (match) {
+      final boysText = match.group(1)!;
+      final girlsText = match.group(2)!;
+
+      return isMale ? boysText : girlsText;
+    });
+  }
+
+  void showMessageConfirmationDialog(
+      BuildContext context, {
+        required String malePreview,
+        required String femalePreview,
+        required List<String> selectedGroups
+      })
+  {
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+
+        return AlertDialog(
+          title: const Text("Confirm SMS Content"),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "Message for Males",
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 6),
+                Text(malePreview),
+
+                const Divider(height: 24),
+
+                const Text(
+                  "Message for Females",
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 6),
+                Text(femalePreview),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel"),
+            )
+          ],
+        );
+      },
+    );
+  }
+
+
+
 
   Widget _tagButton(String label, VoidCallback onTap) {
     return InkWell(

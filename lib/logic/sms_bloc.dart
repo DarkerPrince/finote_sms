@@ -50,7 +50,8 @@ class SmsBloc extends Bloc<SmsEvent, SmsState> {
       }
 
       if (loadedGroups.isNotEmpty || loadedContacts.isNotEmpty) {
-        add(RestoreLogsEvent(loadedGroups.map((k, v) => MapEntry(k, v)), loadedContacts.map((k, v) => MapEntry(k, v))));
+        add(RestoreLogsEvent(loadedGroups.map((k, v) => MapEntry(k, v)),
+            loadedContacts.map((k, v) => MapEntry(k, v))));
       }
     } catch (e) {
       // ignore load errors
@@ -60,8 +61,10 @@ class SmsBloc extends Bloc<SmsEvent, SmsState> {
   Future<void> _persistLogs(SmsState state) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final groupMap = state.sentLogsByGroup.map((k, v) => MapEntry(k, v.map((e) => e.toJson()).toList()));
-      final contactMap = state.sentLogsByContact.map((k, v) => MapEntry(k, v.map((e) => e.toJson()).toList()));
+      final groupMap = state.sentLogsByGroup
+          .map((k, v) => MapEntry(k, v.map((e) => e.toJson()).toList()));
+      final contactMap = state.sentLogsByContact
+          .map((k, v) => MapEntry(k, v.map((e) => e.toJson()).toList()));
       await prefs.setString('sentLogsByGroup', json.encode(groupMap));
       await prefs.setString('sentLogsByContact', json.encode(contactMap));
     } catch (e) {
@@ -86,12 +89,14 @@ class SmsBloc extends Bloc<SmsEvent, SmsState> {
     // convert dynamic lists to SentMessage lists
     final restoredGroups = <String, List<SentMessage>>{};
     event.groups.forEach((k, v) {
-      restoredGroups[k] = (v as List).map((e) => SentMessage.fromJson(e)).toList();
+      restoredGroups[k] =
+          (v as List).map((e) => SentMessage.fromJson(e)).toList();
     });
 
     final restoredContacts = <String, List<SentMessage>>{};
     event.contacts.forEach((k, v) {
-      restoredContacts[k] = (v as List).map((e) => SentMessage.fromJson(e)).toList();
+      restoredContacts[k] =
+          (v as List).map((e) => SentMessage.fromJson(e)).toList();
     });
 
     emit(state.copyWith(
@@ -107,13 +112,12 @@ class SmsBloc extends Bloc<SmsEvent, SmsState> {
   }
 
   Future<void> _onLoadGroups(
-      LoadGroupsEvent event, Emitter<SmsState> emit)
-  async {
+      LoadGroupsEvent event, Emitter<SmsState> emit) async {
     try {
       final jsonData = await rootBundle.loadString('assets/data/contacts.json');
       final data = json.decode(jsonData);
       final groups =
-      (data['groups'] as List).map((e) => Group.fromJson(e)).toList();
+          (data['groups'] as List).map((e) => Group.fromJson(e)).toList();
 
       bool? granted = await telephony.requestPhoneAndSmsPermissions;
 
@@ -138,12 +142,27 @@ class SmsBloc extends Bloc<SmsEvent, SmsState> {
     emit(state.copyWith(selectedGroups: updated));
   }
 
-  Future<void> _onSendBulkSms(
-      SendBulkSmsEvent event,
-      Emitter<SmsState> emit,
-      ) async {
+  String applyGenderPlaceholders({
+    required String message,
+    required bool isMale, // "male" or "female"
+  }) {
+    final regex = RegExp(r'\{([^\/{}]+)\/([^{}]+)\}');
 
-    print("\n\n Sending the sms for ${event.groupName} message : ${event.message}");
+    return message.replaceAllMapped(regex, (match) {
+      final boysText = match.group(1)!;
+      final girlsText = match.group(2)!;
+
+      return isMale ? boysText : girlsText;
+    });
+  }
+
+  Future<void> _onSendBulkSms(
+    SendBulkSmsEvent event,
+    Emitter<SmsState> emit,
+  ) async
+  {
+    print(
+        "\n\n Sending the sms for ${event.groupName} message : ${event.message}");
 
     try {
       final group = state.groups.firstWhere((g) => g.name == event.groupName);
@@ -157,16 +176,23 @@ class SmsBloc extends Bloc<SmsEvent, SmsState> {
 
       // Initialize logs for this group
       final List<SentMessage> groupLogs =
-      List.from(state.sentLogsByGroup[event.groupName] ?? []);
+          List.from(state.sentLogsByGroup[event.groupName] ?? []);
 
-      emit(state.copyWith(
-          status: "📤 Sending messages to ${group.name}..."));
+      emit(state.copyWith(status: "📤 Sending messages to ${group.name}..."));
 
       for (final contact in group.contacts) {
-        final personalizedMessage =
-        event.message.replaceAll("{name}", contact.name);
+
+        //Replacing {ስም}
+        String personalizedMessage =
+            event.message.replaceAll("{ስም}", contact.name);
+
+        //Replacing The {Set/wond text}
+        personalizedMessage = applyGenderPlaceholders(message: personalizedMessage, isMale: contact.isMale);
 
         try {
+
+          print("Personalized Messages - \n\n $personalizedMessage \n\n");
+
           await telephony.sendSms(
             to: contact.phone,
             message: personalizedMessage,
@@ -185,16 +211,17 @@ class SmsBloc extends Bloc<SmsEvent, SmsState> {
 
               // Update state maps
               final updatedGroupLogs =
-              Map<String, List<SentMessage>>.from(state.sentLogsByGroup);
+                  Map<String, List<SentMessage>>.from(state.sentLogsByGroup);
               updatedGroupLogs[event.groupName] = List.from(groupLogs);
 
               final updatedContactLogs =
-              Map<String, List<SentMessage>>.from(state.sentLogsByContact);
+                  Map<String, List<SentMessage>>.from(state.sentLogsByContact);
               updatedContactLogs[contact.phone] =
-              List.from(updatedContactLogs[contact.phone] ?? [])..add(log);
+                  List.from(updatedContactLogs[contact.phone] ?? [])..add(log);
 
               emit(state.copyWith(
-                status: "📩 Sent to ${contact.name}: ${status.name.toUpperCase()}",
+                status:
+                    "📩 Sent to ${contact.name}: ${status.name.toUpperCase()}",
                 sentLogsByGroup: updatedGroupLogs,
                 sentLogsByContact: updatedContactLogs,
               ));
@@ -216,14 +243,14 @@ class SmsBloc extends Bloc<SmsEvent, SmsState> {
       ));
       // persist final state
       _persistLogs(state.copyWith(
-        sentLogsByGroup: Map<String, List<SentMessage>>.from(state.sentLogsByGroup)
-          ..[event.groupName] = List.from(groupLogs),
-        sentLogsByContact: Map<String, List<SentMessage>>.from(state.sentLogsByContact),
+        sentLogsByGroup:
+            Map<String, List<SentMessage>>.from(state.sentLogsByGroup)
+              ..[event.groupName] = List.from(groupLogs),
+        sentLogsByContact:
+            Map<String, List<SentMessage>>.from(state.sentLogsByContact),
       ));
     } catch (e) {
       emit(state.copyWith(status: "❌ Error sending messages: $e"));
     }
   }
-
-
 }
