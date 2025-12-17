@@ -228,15 +228,41 @@ class BulkSmsPage extends StatelessWidget {
 
               // 🟣 SEND BUTTON
               Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: ElevatedButton.icon(
-                  icon: const Icon(Icons.send),
-                  label: const Text("Send Message"),
-                  onPressed: state.selectedGroups.isEmpty
-                      ? null
-                      : () => _showSendBottomSheet(context, state.selectedGroups),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: ElevatedButton.icon(
+                    onPressed: state.selectedGroups.isEmpty
+                        ? null
+                        : () => _showSendBottomSheet(context, state.selectedGroups),
+                    icon: const Icon(
+                      Icons.send_rounded,
+                      size: 22,
+                      color: Colors.white,
+                    ),
+                    label: const Text(
+                      "Send Message",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      elevation: 6,
+                      backgroundColor: Theme.of(context).primaryColor,
+                      disabledBackgroundColor: Colors.grey.shade800,
+                      disabledForegroundColor: Colors.grey.shade500,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
                 ),
               ),
+
             ],
           ),
         );
@@ -420,7 +446,8 @@ class BulkSmsPage extends StatelessWidget {
 
 
 
-  void _showSendBottomSheet(BuildContext context, List<String> selectedGroups) {
+  void _showSendBottomSheet(BuildContext context, List<String> selectedGroups)
+  {
     final msgController = TextEditingController();
 
     void insertTag(String tag) {
@@ -605,52 +632,101 @@ class BulkSmsPage extends StatelessWidget {
               const SizedBox(height: 12),
 
               /// ---------- SEND BUTTON ----------
-              Row(children: [
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.remove_red_eye),
-                  label: const Text("Message Preview"),
-                  onPressed: () {
-                    final String baseMessage =
-                    msgController.text.replaceAll("{ስም}", "{ስም}");
+              Row(
+                children: [
+                  // Message Preview Button
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          final String baseMessage =
+                          msgController.text.replaceAll("{ስም}", "{ስም}");
 
-                    final String malePreview = applyGenderPlaceholders(
-                      message: baseMessage,
-                      isMale: true,
-                    );
+                          final String malePreview = applyGenderPlaceholders(
+                            message: baseMessage,
+                            isMale: true,
+                          );
 
-                    final String femalePreview = applyGenderPlaceholders(
-                      message: baseMessage,
-                      isMale: false,
-                    );
+                          final String femalePreview = applyGenderPlaceholders(
+                            message: baseMessage,
+                            isMale: false,
+                          );
 
-                    showMessageConfirmationDialog(
-                      context,
-                      malePreview: malePreview,
-                      femalePreview: femalePreview,
-                      selectedGroups: selectedGroups
-                    );
-                  },
-                ),
-                const SizedBox(width: 4),
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.send_rounded),
-                  label: const Text("Send Now"),
-                  onPressed: () {
-                    Navigator.pop(context);
-
-                    for (var groupName in selectedGroups) {
-                      context.read<SmsBloc>().add(
-                        SendBulkSmsEvent(
-                          groupName: groupName,
-                          message: msgController.text,
+                          showMessageConfirmationDialog(
+                            context,
+                            malePreview: malePreview,
+                            femalePreview: femalePreview,
+                            selectedGroups: selectedGroups,
+                          );
+                        },
+                        icon: Icon(Icons.remove_red_eye_rounded, size: 20 ,color: Theme.of(context).primaryColor,),
+                        label: Text(
+                          "Message Preview",
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Theme.of(context).primaryColor,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      );
-                    }
-                  },
-                ),
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white54,
+                          textStyle: TextStyle(
+                            fontSize: 14,
+                            color: Theme.of(context).primaryColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
 
+                  // Send Now Button
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context);
 
-              ],),
+                          for (var groupName in selectedGroups) {
+                            context.read<SmsBloc>().add(
+                              SendBulkSmsEvent(
+                                groupName: groupName,
+                                message: msgController.text,
+                              ),
+                            );
+                          }
+                        },
+                        icon: const Icon(Icons.send_rounded, size: 20 , color: Colors.white,),
+                        label: const Text(
+                          "Send Now",
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Theme.of(context).primaryColor,
+                          foregroundColor: Colors.white,
+                          elevation: 6,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
               const SizedBox(height: 4),
             ],
           ),

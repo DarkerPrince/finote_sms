@@ -1,5 +1,6 @@
 import 'package:finote_sms/logic/sms_event.dart';
 import 'package:finote_sms/login_page.dart';
+import 'package:finote_sms/presentation/AppColors.dart';
 import 'package:finote_sms/presentation/bulk_sms_page.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
@@ -25,8 +26,30 @@ class MyApp extends StatelessWidget {
       create: (_) => SmsBloc()..add(LoadGroupsEvent()),
       child: MaterialApp(
         title: 'Bulk SMS Manager',
-        theme: ThemeData(primarySwatch: Colors.blue),
         debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          // dark mode
+          colorScheme: ColorScheme.light(
+            primary: AppColors.primary,
+            secondary: AppColors.primary.withOpacity(0.8),
+          ),
+          appBarTheme: AppBarTheme(
+            backgroundColor: AppColors.primary,
+            foregroundColor: Colors.white,
+            elevation: 4,
+          ),
+          elevatedButtonTheme: ElevatedButtonThemeData(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              elevation: 6,
+              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+            ),
+          ),
+        ),
         home: AuthWrapper(),
       ),
     );

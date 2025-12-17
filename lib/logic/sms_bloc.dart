@@ -193,6 +193,15 @@ class SmsBloc extends Bloc<SmsEvent, SmsState> {
 
           print("Personalized Messages - \n\n $personalizedMessage \n\n");
 
+          final telephony = Telephony.instance;
+
+          bool? granted = await telephony.requestSmsPermissions;
+
+          if (granted != true) {
+            print("❌ SMS permission denied");
+            return;
+          }
+          print("SMS Granted check |/");
           await telephony.sendSms(
             to: contact.phone,
             message: personalizedMessage,
